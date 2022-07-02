@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import { launchCamera } from 'react-native-image-picker';
 import {
   StyleSheet,
   Text,
@@ -50,6 +51,7 @@ const { HttpModule } = NativeModules;
 const App = () => {
   React.useEffect(() => {
     HttpModule.createSSLClient(CRT, '192.168.0.100')
+    // GET Request
     HttpModule.get('https://192.168.0.100:8000/ping')
       .then((res) => {
         console.log(res);
@@ -57,6 +59,23 @@ const App = () => {
       .catch((err) => {
         console.log(err)
       })
+    // File Upload
+    launchCamera({
+      mediaType: 'photo',
+    }).then((res) => {
+      if (!res.assets) {
+        return
+      }
+      const asset = res.assets[0]
+      const { fileName, uri, type } = asset
+      HttpModule.upload('https://192.168.0.100:8000/upload', 'file', fileName, uri, type)
+        .then((res) => {
+          console.log(res)
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+    })
   }, [])
   return (
     <View>
