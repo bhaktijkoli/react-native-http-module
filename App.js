@@ -68,7 +68,13 @@ const App = () => {
       }
       const asset = res.assets[0]
       const { fileName, uri, type } = asset
-      HttpModule.upload('https://192.168.0.100:8000/upload', 'file', fileName, uri, type)
+      const files = [{
+        name: 'file',
+        fileName,
+        uri,
+        type,
+      }]
+      HttpModule.upload('https://192.168.0.100:8000/upload', { files, fields: { x: 1, y: 2 } })
         .then((res) => {
           console.log(res)
         })

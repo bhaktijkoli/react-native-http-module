@@ -8,6 +8,8 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,6 +20,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -35,12 +38,13 @@ import okhttp3.tls.HandshakeCertificates;
 
 public class HttpModule extends ReactContextBaseJavaModule {
 
-    private  final String TAG = "HttpModule";
+    private final String TAG = "HttpModule";
     private OkHttpClient client;
 
     HttpModule(ReactApplicationContext context) {
         super(context);
     }
+
     @Override
     public String getName() {
         return "HttpModule";
@@ -81,17 +85,27 @@ public class HttpModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void upload(String url, String field, String fileName, String fileUrl, String mineType, Promise promise) {
+    public void upload(String url, ReadableMap options, Promise promise) {
         try {
-            RequestBody requestBody = new MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart(field, fileName,
-                            RequestBody.create(MediaType.parse(mineType), new File(fileUrl.replace("file:/", ""))))
-                    .build();
-
+            ReadableArray files = options.getArray("files");
+            MultipartBody.Builder bodyBuilder = new MultipartBody.Builder();
+            bodyBuilder.setType(MultipartBody.FORM);
+            for (int i = 0; i < files.size(); i++) {
+                ReadableMap file = files.getMap(i);
+                String name = file.getString("name");
+                String fileName = file.getString("fileName");
+                String type = file.getString("type");
+                String uri = file.getString("uri").replace("file:/", "");
+                bodyBuilder.addFormDataPart(name, fileName, RequestBody.create(MediaType.parse(type),new File(uri)));
+            }
+            ReadableMap fields = options.getMap("fields");
+            for (Iterator<Map.Entry<String, Object>> it = fields.getEntryIterator(); it.hasNext(); ) {
+                Map.Entry<String, Object> entry = it.next();
+                bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue().toString());
+            }
             Request request = new Request.Builder()
                     .url(url)
-                    .post(requestBody)
+                    .post(bodyBuilder.build())
                     .build();
 
             Response response = this.client.newCall(request).execute();
